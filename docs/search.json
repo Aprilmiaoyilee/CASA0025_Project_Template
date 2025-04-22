@@ -1,5 +1,12 @@
 [
   {
+    "objectID": "readme.html",
+    "href": "readme.html",
+    "title": "",
+    "section": "",
+    "text": "Use this repository to host a website for your CASA0025 final project by following these stpes:\n\nclone this repository\ninstall quarto\nedit the ‘index.qmd’ file with the contents of your project\nusing terminal, navigate to the project directory and run “quarto render”\npush the changes to your github repository\non github, navigate to Settings&gt;Pages&gt;Build and Deployment. Make sure that under “Source” it says “deploy from branch”. Under “Branch”, select “Main” in the first dropdown and “Docs” under the second drop down. Then press “Save”\n\nYour website should now be available under https://{your_username}.github.io/{your_repo_name}"
+  },
+  {
     "objectID": "index.html",
     "href": "index.html",
     "title": "CASA00025 Group Project Title Here",
@@ -26,12 +33,5 @@
     "title": "CASA00025 Group Project Title Here",
     "section": "",
     "text": "Use this section to explain how your application works using code blocks and text explanations (no more than 500 words excluding code):\nMap.setCenter(35.51898, 33.90153, 15);\n\nMap.setOptions(\"satellite\");\n\nvar aoi = ee.Geometry.Point(35.51898, 33.90153).buffer(3000);\nYou can include images:\n\n\n\nPixelwise T-Test, 2018\n\n\nand math: \\[ \\Large t = {\\frac{\\overline{x_1}-\\overline{x_2}} {\\sqrt{\\frac{s^2_1}{n_1} + \\frac{s^2_2}{n_2}}}} \\]"
-  },
-  {
-    "objectID": "readme.html",
-    "href": "readme.html",
-    "title": "",
-    "section": "",
-    "text": "Use this repository to host a website for your CASA0025 final project by following these stpes:\n\nclone this repository\ninstall quarto\nedit the ‘index.qmd’ file with the contents of your project\nusing terminal, navigate to the project directory and run “quarto render”\npush the changes to your github repository\non github, navigate to Settings&gt;Pages&gt;Build and Deployment. Make sure that under “Source” it says “deploy from branch”. Under “Branch”, select “Main” in the first dropdown and “Docs” under the second drop down. Then press “Save”\n\nYour website should now be available under https://{your_username}.github.io/{your_repo_name}"
   }
 ]
