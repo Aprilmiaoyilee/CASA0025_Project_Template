@@ -10,4 +10,5 @@ Use this repository to host a website for your CASA0025 final project by followi
 Your website should now be available under 
 https://{your_username}.github.io/{your_repo_name}
 
-[website for this template](https://aprilmiaoyilee.github.io/CASA0025_Project_Template/)
+- [website for this template](https://aprilmiaoyilee.github.io/CASA0025_Project_Template/)
+- [repo for application codes](https://github.com/tariroMashCasa/casa0025)
