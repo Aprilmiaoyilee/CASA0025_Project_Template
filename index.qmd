@@ -258,58 +258,69 @@ Where:
 -   $A_{admin}$: Total area of the administrative region (in square metres)
 
 ```py
-# 2️ Convert GeoDataFrame → EE FeatureCollection
-                    if st.session_state.london_boroughs_over_65 is None:
-                        # now we're going to add in the vector data for the london boroughs for number of people over 65 from a geojson file
-                        # london_boroughs_over_65 = gp.read_file('data/london_percentage_of_population_over_65.geojson')#.head(10).to_crs(4326)
-                        london_boroughs_over_65 = pd.read_parquet('data/london_percentage_of_population_over_65.parquet.gzip')
+## Process total building volumes per lsoa
+# This is split into batches to prevent time out issues.
+
+# Get list of all LSOA codes
+lsoa_codes = con.execute("""
+    SELECT DISTINCT LSOA21CD
+    FROM london_lsoa;
+    """).fetchdf()['LSOA21CD'].tolist()
+
+# Split into batches
+batch_size = 250
+batches = [lsoa_codes[i:i + batch_size] for i in range(0, len(lsoa_codes), batch_size)]
+
+# Create the table before the loop if it doesn't exist
+con.execute("""
+    CREATE TABLE IF NOT EXISTS london_LSOAs_vol (
+        LSOA21CD VARCHAR PRIMARY KEY,
+        borough VARCHAR,
+        building_count INTEGER,
+        total_volume DOUBLE,
+        geom GEOMETRY
+    )
+""")
+
+for batch in batches:
+    # Convert to SQL IN clause
+    code_list = ','.join(f"'{code}'" for code in batch)
+
+    # create query to insert data into new london_LSOAs_vol table
+    query = f"""
+        INSERT INTO london_LSOAs_vol
+        SELECT
+            l.LSOA21CD,
+            l.Borough AS borough,
+            COUNT(*) AS building_count,
+            SUM(b.volume) AS total_volume,
+            l.geom
+        FROM london_lsoa l
+        JOIN buildings b
+        ON ST_Intersects(l.geom, ST_GeomFromText(b.geometry))
+        WHERE l.LSOA21CD IN ({code_list})
+        GROUP BY l.LSOA21CD, l.geom, l.Borough;
+    """
+    # execute the query created above
+    con.execute(query)
 
 
+# Calculate the building mass density
+# Building Mass Density = LSOA area x total building volume
 
-                        # load the lsoa level geometries
-                        # gdf_lsoas = pd.read_parquet('data/london_lsoas_2011_mapping_file.parquet.gzip')
-                        gdf_lsoas = pd.read_parquet('data/london_msoas_2021_mapping_file.parquet.gzip')
-                        # convert the wkt geometry to a shapely geometry
-                        gdf_lsoas["geometry"] = gdf_lsoas["geometry"].apply(shapely.wkt.loads)
-                        # convert this to a geodataframe
-                        gdf_lsoas = gp.GeoDataFrame(gdf_lsoas, geometry="geometry", crs=4326)
-                        # filter the LAD11NM column to match the users  
-                        gdf_boroughs = gdf_lsoas[gdf_lsoas["LAD11NM"] == st.session_state.selected_council]
-                        gdf_boroughs = gdf_boroughs[["MSOA21CD"]].rename(columns={"MSOA21CD":"geography code"})
+# Calculate area for each LSOA (assuming CRS in meters)
+con.execute("""
+    ALTER TABLE london_LSOAs_vol ADD COLUMN area_m2 DOUBLE;
+    UPDATE london_LSOAs_vol
+    SET area_m2 = ST_Area(geom);
+""")
 
-
-                        # do a spatial join to get the vulnerable population data for the selected council
-                        london_boroughs_over_65 = london_boroughs_over_65.merge(gdf_boroughs, on="geography code")
-
-                        # convert the wkt geometry to a shapely geometry
-                        london_boroughs_over_65["geometry"] = london_boroughs_over_65["geometry"].apply(shapely.wkt.loads)
-                        # convert this to a geodataframe
-                        london_boroughs_over_65 = gp.GeoDataFrame(london_boroughs_over_65, geometry="geometry", crs=4326)
-
-
-                        # add this to session state
-                        st.session_state.london_boroughs_over_65 = london_boroughs_over_65
-                    else:
-                        london_boroughs_over_65 = st.session_state.london_boroughs_over_65
-
-
-
-
-                    # calculate the midpoint of london
-                    london_midpoint_latitude, london_midpoint_longitude = london_boroughs_over_65.to_crs(4326).geometry.centroid.y.mean(), london_boroughs_over_65.to_crs(4326).geometry.centroid.x.mean()
-                    
-
-                    # rename columns for the map
-                    london_boroughs_over_65 = london_boroughs_over_65.rename(columns={"pct_over_65_pop":"Population over 65 %",
-                                                                                      "total_pop_over_65_years_old":"Total Population over 65",
-                                                                                      "total_pop":"Total Population"})
-                    london_boroughs_over_65 = london_boroughs_over_65.drop(columns=["date","city"])
-                    # round the % population over 65 to 2 decimal places
-                    london_boroughs_over_65["Population over 65 %"] = (london_boroughs_over_65["Population over 65 %"] * 100).round(2)
-
-                    if st.session_state.london_boroughs_over_65_map is None:
-                        # we'll plot this on a folium map
-                        m = london_boroughs_over_65.explore("Population over 65 %", tiles="CartoDB.Positron", cmap="Blues", scheme="Quantiles", legend_title="Population over 65", style_kwds={'weight': 1})
+# Calculate building mass density for each LSOA
+con.execute("""
+    ALTER TABLE london_LSOAs_vol ADD COLUMN building_mass_density DOUBLE;
+    UPDATE london_LSOAs_vol
+    SET building_mass_density = total_volume / area_m2;
+""")
 
 ```
 

@@ -377,58 +377,69 @@ Bmd = \frac{\sum (H_i \times A_i)}{A_{admin}}
 <li><span class="math inline">\(A_i\)</span>: Footprint area of building <span class="math inline">\(i\)</span> (in square metres)</li>
 <li><span class="math inline">\(A_{admin}\)</span>: Total area of the administrative region (in square metres)</li>
 </ul>
-<div class="sourceCode" id="cb4"><pre class="sourceCode py code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 2️ Convert GeoDataFrame → EE FeatureCollection</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">if</span> st.session_state.london_boroughs_over_65 <span class="kw">is</span> <span class="va">None</span>:</span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>                        <span class="co"># now we're going to add in the vector data for the london boroughs for number of people over 65 from a geojson file</span></span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>                        <span class="co"># london_boroughs_over_65 = gp.read_file('data/london_percentage_of_population_over_65.geojson')#.head(10).to_crs(4326)</span></span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>                        london_boroughs_over_65 <span class="op">=</span> pd.read_parquet(<span class="st">'data/london_percentage_of_population_over_65.parquet.gzip'</span>)</span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>                        <span class="co"># load the lsoa level geometries</span></span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>                        <span class="co"># gdf_lsoas = pd.read_parquet('data/london_lsoas_2011_mapping_file.parquet.gzip')</span></span>
-<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>                        gdf_lsoas <span class="op">=</span> pd.read_parquet(<span class="st">'data/london_msoas_2021_mapping_file.parquet.gzip'</span>)</span>
-<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>                        <span class="co"># convert the wkt geometry to a shapely geometry</span></span>
-<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>                        gdf_lsoas[<span class="st">"geometry"</span>] <span class="op">=</span> gdf_lsoas[<span class="st">"geometry"</span>].<span class="bu">apply</span>(shapely.wkt.loads)</span>
-<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>                        <span class="co"># convert this to a geodataframe</span></span>
-<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>                        gdf_lsoas <span class="op">=</span> gp.GeoDataFrame(gdf_lsoas, geometry<span class="op">=</span><span class="st">"geometry"</span>, crs<span class="op">=</span><span class="dv">4326</span>)</span>
-<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>                        <span class="co"># filter the LAD11NM column to match the users  </span></span>
-<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>                        gdf_boroughs <span class="op">=</span> gdf_lsoas[gdf_lsoas[<span class="st">"LAD11NM"</span>] <span class="op">==</span> st.session_state.selected_council]</span>
-<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>                        gdf_boroughs <span class="op">=</span> gdf_boroughs[[<span class="st">"MSOA21CD"</span>]].rename(columns<span class="op">=</span>{<span class="st">"MSOA21CD"</span>:<span class="st">"geography code"</span>})</span>
-<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>                        <span class="co"># do a spatial join to get the vulnerable population data for the selected council</span></span>
-<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>                        london_boroughs_over_65 <span class="op">=</span> london_boroughs_over_65.merge(gdf_boroughs, on<span class="op">=</span><span class="st">"geography code"</span>)</span>
-<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>                        <span class="co"># convert the wkt geometry to a shapely geometry</span></span>
-<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>                        london_boroughs_over_65[<span class="st">"geometry"</span>] <span class="op">=</span> london_boroughs_over_65[<span class="st">"geometry"</span>].<span class="bu">apply</span>(shapely.wkt.loads)</span>
-<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>                        <span class="co"># convert this to a geodataframe</span></span>
-<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>                        london_boroughs_over_65 <span class="op">=</span> gp.GeoDataFrame(london_boroughs_over_65, geometry<span class="op">=</span><span class="st">"geometry"</span>, crs<span class="op">=</span><span class="dv">4326</span>)</span>
+<div class="sourceCode" id="cb4"><pre class="sourceCode py code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">## Process total building volumes per lsoa</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="co"># This is split into batches to prevent time out issues.</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Get list of all LSOA codes</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>lsoa_codes <span class="op">=</span> con.execute(<span class="st">"""</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="st">    SELECT DISTINCT LSOA21CD</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="st">    FROM london_lsoa;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="st">    """</span>).fetchdf()[<span class="st">'LSOA21CD'</span>].tolist()</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Split into batches</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>batch_size <span class="op">=</span> <span class="dv">250</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>batches <span class="op">=</span> [lsoa_codes[i:i <span class="op">+</span> batch_size] <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">0</span>, <span class="bu">len</span>(lsoa_codes), batch_size)]</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Create the table before the loop if it doesn't exist</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>con.execute(<span class="st">"""</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="st">    CREATE TABLE IF NOT EXISTS london_LSOAs_vol (</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="st">        LSOA21CD VARCHAR PRIMARY KEY,</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a><span class="st">        borough VARCHAR,</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a><span class="st">        building_count INTEGER,</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a><span class="st">        total_volume DOUBLE,</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a><span class="st">        geom GEOMETRY</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a><span class="st">    )</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a><span class="st">"""</span>)</span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> batch <span class="kw">in</span> batches:</span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Convert to SQL IN clause</span></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>    code_list <span class="op">=</span> <span class="st">','</span>.join(<span class="ss">f"'</span><span class="sc">{</span>code<span class="sc">}</span><span class="ss">'"</span> <span class="cf">for</span> code <span class="kw">in</span> batch)</span>
 <span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>                        <span class="co"># add this to session state</span></span>
-<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>                        st.session_state.london_boroughs_over_65 <span class="op">=</span> london_boroughs_over_65</span>
-<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">else</span>:</span>
-<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a>                        london_boroughs_over_65 <span class="op">=</span> st.session_state.london_boroughs_over_65</span>
-<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a>                    <span class="co"># calculate the midpoint of london</span></span>
-<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a>                    london_midpoint_latitude, london_midpoint_longitude <span class="op">=</span> london_boroughs_over_65.to_crs(<span class="dv">4326</span>).geometry.centroid.y.mean(), london_boroughs_over_65.to_crs(<span class="dv">4326</span>).geometry.centroid.x.mean()</span>
-<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a>                    </span>
-<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a>                    <span class="co"># rename columns for the map</span></span>
-<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a>                    london_boroughs_over_65 <span class="op">=</span> london_boroughs_over_65.rename(columns<span class="op">=</span>{<span class="st">"pct_over_65_pop"</span>:<span class="st">"Population over 65 %"</span>,</span>
-<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a>                                                                                      <span class="st">"total_pop_over_65_years_old"</span>:<span class="st">"Total Population over 65"</span>,</span>
-<span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a>                                                                                      <span class="st">"total_pop"</span>:<span class="st">"Total Population"</span>})</span>
-<span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a>                    london_boroughs_over_65 <span class="op">=</span> london_boroughs_over_65.drop(columns<span class="op">=</span>[<span class="st">"date"</span>,<span class="st">"city"</span>])</span>
-<span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a>                    <span class="co"># round the % population over 65 to 2 decimal places</span></span>
-<span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a>                    london_boroughs_over_65[<span class="st">"Population over 65 %"</span>] <span class="op">=</span> (london_boroughs_over_65[<span class="st">"Population over 65 %"</span>] <span class="op">*</span> <span class="dv">100</span>).<span class="bu">round</span>(<span class="dv">2</span>)</span>
-<span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-50"><a href="#cb4-50" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">if</span> st.session_state.london_boroughs_over_65_map <span class="kw">is</span> <span class="va">None</span>:</span>
-<span id="cb4-51"><a href="#cb4-51" aria-hidden="true" tabindex="-1"></a>                        <span class="co"># we'll plot this on a folium map</span></span>
-<span id="cb4-52"><a href="#cb4-52" aria-hidden="true" tabindex="-1"></a>                        m <span class="op">=</span> london_boroughs_over_65.explore(<span class="st">"Population over 65 %"</span>, tiles<span class="op">=</span><span class="st">"CartoDB.Positron"</span>, cmap<span class="op">=</span><span class="st">"Blues"</span>, scheme<span class="op">=</span><span class="st">"Quantiles"</span>, legend_title<span class="op">=</span><span class="st">"Population over 65"</span>, style_kwds<span class="op">=</span>{<span class="st">'weight'</span>: <span class="dv">1</span>})</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>    <span class="co"># create query to insert data into new london_LSOAs_vol table</span></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>    query <span class="op">=</span> <span class="ss">f"""</span></span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a><span class="ss">        INSERT INTO london_LSOAs_vol</span></span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a><span class="ss">        SELECT</span></span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a><span class="ss">            l.LSOA21CD,</span></span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a><span class="ss">            l.Borough AS borough,</span></span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a><span class="ss">            COUNT(*) AS building_count,</span></span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a><span class="ss">            SUM(b.volume) AS total_volume,</span></span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a><span class="ss">            l.geom</span></span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a><span class="ss">        FROM london_lsoa l</span></span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a><span class="ss">        JOIN buildings b</span></span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a><span class="ss">        ON ST_Intersects(l.geom, ST_GeomFromText(b.geometry))</span></span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a><span class="ss">        WHERE l.LSOA21CD IN (</span><span class="sc">{</span>code_list<span class="sc">}</span><span class="ss">)</span></span>
+<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a><span class="ss">        GROUP BY l.LSOA21CD, l.geom, l.Borough;</span></span>
+<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a><span class="ss">    """</span></span>
+<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a>    <span class="co"># execute the query created above</span></span>
+<span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a>    con.execute(query)</span>
+<span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate the building mass density</span></span>
+<span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a><span class="co"># Building Mass Density = LSOA area x total building volume</span></span>
+<span id="cb4-50"><a href="#cb4-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-51"><a href="#cb4-51" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate area for each LSOA (assuming CRS in meters)</span></span>
+<span id="cb4-52"><a href="#cb4-52" aria-hidden="true" tabindex="-1"></a>con.execute(<span class="st">"""</span></span>
+<span id="cb4-53"><a href="#cb4-53" aria-hidden="true" tabindex="-1"></a><span class="st">    ALTER TABLE london_LSOAs_vol ADD COLUMN area_m2 DOUBLE;</span></span>
+<span id="cb4-54"><a href="#cb4-54" aria-hidden="true" tabindex="-1"></a><span class="st">    UPDATE london_LSOAs_vol</span></span>
+<span id="cb4-55"><a href="#cb4-55" aria-hidden="true" tabindex="-1"></a><span class="st">    SET area_m2 = ST_Area(geom);</span></span>
+<span id="cb4-56"><a href="#cb4-56" aria-hidden="true" tabindex="-1"></a><span class="st">"""</span>)</span>
+<span id="cb4-57"><a href="#cb4-57" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-58"><a href="#cb4-58" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate building mass density for each LSOA</span></span>
+<span id="cb4-59"><a href="#cb4-59" aria-hidden="true" tabindex="-1"></a>con.execute(<span class="st">"""</span></span>
+<span id="cb4-60"><a href="#cb4-60" aria-hidden="true" tabindex="-1"></a><span class="st">    ALTER TABLE london_LSOAs_vol ADD COLUMN building_mass_density DOUBLE;</span></span>
+<span id="cb4-61"><a href="#cb4-61" aria-hidden="true" tabindex="-1"></a><span class="st">    UPDATE london_LSOAs_vol</span></span>
+<span id="cb4-62"><a href="#cb4-62" aria-hidden="true" tabindex="-1"></a><span class="st">    SET building_mass_density = total_volume / area_m2;</span></span>
+<span id="cb4-63"><a href="#cb4-63" aria-hidden="true" tabindex="-1"></a><span class="st">"""</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 <section id="heat-stress-vulnerability-index-hsvi" class="level3">
 <h3 class="anchored" data-anchor-id="heat-stress-vulnerability-index-hsvi">Heat Stress Vulnerability Index (HSVI)</h3>
